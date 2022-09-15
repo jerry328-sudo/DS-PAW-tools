@@ -9,8 +9,9 @@ def tran(fix):
         return 'T'
 
 # get the directory where the py file is located
-dir = os.path.dirname(os.path.realpath(__file__))
-os.chdir(dir)
+# dir = os.path.dirname(os.path.realpath(__file__))
+# os.chdir(dir)
+dir = os.getcwd()
 
 # load DS-PAW file
 with open('frequency.json', 'r') as f:
