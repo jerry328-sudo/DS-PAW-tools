@@ -19,7 +19,8 @@ Please enter the following function you want to use:
         choice = int(input('''You have selected the function of structure setting.
 
 Please enter the following function you want to use:
-201. Set fixed atoms \n'''))
+201. Set fixed atoms
+202. Randomly dope atom \n'''))
         
     elif choice == 3:
         choice = int(input('''You have selected the function of others.
@@ -39,6 +40,8 @@ if choice == 101:
     os.system('python ' + dir + "\\Thermodynamic_correction\\tran_fre_vasp.py")
 elif choice == 201:
     os.system('python ' + dir + "\\Structure_Settings\\set_fix_atom.py")
+elif choice == 202:
+    os.system('python ' + dir + "\\Structure_Settings\\Randomly_doped.py")
 elif choice == 301:
     os.system('python ' + dir + "\\other_tools\\maxforce_convergence_plot.py")
 
