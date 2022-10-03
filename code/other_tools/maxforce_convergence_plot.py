@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from tkinter import filedialog
 from tkinter import *
 import os
+import numpy as np
 
 print('The current working directory is: ' + '\n' + os.getcwd())
 dir = input('Please enter the directory where the "Maxforce.log" file is located(press any key to continue): \n'
@@ -33,7 +34,31 @@ trace = []
 for ic in Ic:
     trace.append(float(ic[2]))
 
-plt.plot(trace)
-plt.xlabel('Step')
+# chose the part of the trace to plot
+p1 = int(input('Please enter the starting point of the trace to plot: \n'))
+p2 = int(input('Please enter the end point of the trace to plot (enter "-1" to not set the end point): \n'))
+if p2 == -1:
+    p2 = len(trace)
+
+while p1 < 0 or p2 > len(trace) or p1 > p2:
+    print('The starting point and end point you entered are out of range, please re-enter!')
+    p1 = int(input('Please enter the starting point of the trace to plot (enter "-1" to exit): \n'))
+    if p1 == -1:
+        exit()
+    p2 = int(input('Please enter the end point of the trace to plot (enter "-1" to not set the end point): \n'))
+if p2 == -1:
+    p2 = len(trace)
+if p1 != 0:
+    p1 -= 1
+trace = trace[p1:p2]
+
+# Set the value of x-axis
+x = np.arange(p1+1, p2+1, 1)
+
+# Plot the trace
+plt.plot(x, trace, 'r')
+plt.xlabel('Iteration')
 plt.ylabel('Maxforce')
+plt.title('Maxforce Convergence Plot')
 plt.show()
+

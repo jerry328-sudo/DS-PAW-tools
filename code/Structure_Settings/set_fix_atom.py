@@ -54,8 +54,8 @@ thick = sorted(thick, reverse=True)
 if len(thick) == 1:
     print('There is only one layer of atoms!')
     exit()
-elif len(thick) > 10:
-    temp = input('There are more than 10 layers of atoms, do you want to continue? (y/n): ')
+elif len(thick) > 50:
+    temp = input('There are more than 50 layers of atoms, do you want to continue? (y/n): ')
     temp = temp.lower()
     if temp == 'n':
         exit()
@@ -82,6 +82,10 @@ dire = float(dire)
 target = 0
 temp = ['F', 'F', 'F']
 tempt =['T', 'T', 'T']
+count_free_atom = 0
+count_fix_atom = 0
+count_atom = 0
+
 
 for i in range(len(Ic)):
     if 'Cartesian' in Ic[i]:
@@ -92,15 +96,22 @@ for i in range(len(Ic)):
             target = 2
     if target == 1:
         if 'Cartesian' not in Ic[i]:
+            count_atom += 1
             if float(Ic[i][direction]) <= dire:
                 Ic[i].append(' '.join(tempt))
+                count_fix_atom += 1
             else:
                 Ic[i].append(' '.join(temp))
+                count_free_atom += 1
     if target == 2:
         if 'Cartesian' not in Ic[i]:
+            count_atom += 1
             if float(Ic[i][direction]) <= dire:
                 del Ic[i][-3:]
                 Ic[i].append(' '.join(tempt))
+                count_fix_atom += 1
+            else:
+                count_free_atom += 1
 
 filename = input('Enter the name of the output file (Enter 0 to use the original name): ')
 if filename == '0':
@@ -109,3 +120,8 @@ if filename == '0':
 with open('{}.as'.format(filename), 'w') as f:
     for i in range(len(Ic)):
         f.write(' '.join(Ic[i])+'\n')
+
+with open('atom_count.txt', 'w') as f:
+    f.write('Total number of atoms: {}\n'.format(count_atom))
+    f.write('Number of fixed atoms: {}\n'.format(count_fix_atom))
+    f.write('Number of free atoms: {}\n'.format(count_free_atom))
