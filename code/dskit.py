@@ -1,4 +1,5 @@
 import os
+import functions.function_normal as fn
 # Create a UI for selecting functions
 print('Please select the function you want to use:')
 print('1. Thermodynamic correction')

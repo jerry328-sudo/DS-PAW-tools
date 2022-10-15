@@ -1,4 +1,6 @@
-import function_normal as fn
+import sys
+sys.path.append("f:\\code\\DS-PAW\\DS-PAW-tools\\code")
+import functions.function_normal as fn
 import numpy as np
 
 cell = fn.Read_As_File()
