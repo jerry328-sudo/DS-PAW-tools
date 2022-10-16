@@ -7,6 +7,8 @@ def coordinate_transform
 import json
 import os
 import numpy as np
+import scipy.interpolate as si
+import matplotlib.pyplot as plt
 
 # read the as file class
 
@@ -244,3 +246,55 @@ def coordinate_transform(dos, coor):
     ay = za[1]*coor[0] + zb[1]*coor[1] + zc[1]*coor[2]
     az = za[2]*coor[0] + zb[2]*coor[1] + zc[2]*coor[2]
     return [ax, ay, az]
+
+def plot_neb_barrier(neb_json, interp_kinds="cubic", data_clean=False, data_save=False):
+    '''给出插值的样条曲线的阶数
+    'zero' 、'nearest'零阶
+    'slinear' 、'linear'线性
+    'quadratic' 、'cubic'二阶和三阶样条曲线,更高阶的曲线可以直接使用整数值指定'''
+    with open(neb_json,"r") as file:
+        neb = json.load(file)
+
+    reaction_coordinate = neb["Distance"]["ReactionCoordinate"]
+    energy = neb["Energy"]["TotalEnergy"]
+
+    x = []
+    for c in reaction_coordinate:
+        if len(x) > 0:
+            x.append(x[-1] + c)
+        else:
+            x.append(c)
+
+    y = [x-energy[0] for x in energy]
+
+    # 清理数据，挑选最大值
+    maxE = 0
+    for i in range(len(y)):
+        if y[i] > y[maxE]:
+            maxE = i
+    if data_clean:
+        x = [0, 1, 2]
+        # x = [x[0], x[maxE], x[-1]]
+        y = [y[0], y[maxE], y[-1]]
+
+    inter_f = si.interp1d(x,y,kind=interp_kinds)
+    xnew = np.linspace(x[0],x[-1],100)
+    ynew = inter_f(xnew)
+    if data_save:
+        with open("neb_data.txt","w") as file:
+            file.write('raw data'+'\n')
+            for i in range(len(x)):
+                file.write(str(x[i])+'\t'+str(y[i])+'\n')
+            file.write('interpolation data'+'\n')
+            for i in range(len(xnew)):
+                file.write(str(xnew[i])+" "+str(ynew[i])+"\n")
+
+    # 样条插值
+    # tck = si.splrep(x, y, s=0)
+    # xnew = np.arange(x[0], x[-1], (x[-1]-x[0])/100)
+    # ynew = si.splev(xnew, tck, der=0)
+
+    plt.plot(xnew,ynew,c="b")
+    plt.scatter(x,y,c="r")
+    plt.xlabel("Reaction Coordinate")
+    plt.ylabel("Energy")
