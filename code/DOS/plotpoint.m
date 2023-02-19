@@ -1,9 +1,9 @@
-for ii=1:59
+for ii=1:76
     if dosdata.projectdos(ii).atom == 'O'
         scatter3(dosdata.projectdos(ii).position(1),dosdata.projectdos(ii).position(2),dosdata.projectdos(ii).position(3),'filled','r')
         hold on
     end
-    if dosdata.projectdos(ii).atom == 'Cu'
+    if dosdata.projectdos(ii).atom == 'Ni'
         scatter3(dosdata.projectdos(ii).position(1),dosdata.projectdos(ii).position(2),dosdata.projectdos(ii).position(3), [],[0.9290 0.6940 0.1250],'filled')
         hold on
     end

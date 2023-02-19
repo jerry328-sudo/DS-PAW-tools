@@ -41,7 +41,7 @@ class Read_As_File:
                 self.Ic.append(self.I[i].split())
 
         # count the number of atoms
-        self.n_atoms = int(self.Ic[1][0])
+        self.n_atoms = int(self.Ic[1][0]) 
         self.target = len(self.I)
         for i in range(len(self.I)):
             if 'Cartesian' in self.Ic[i]:

@@ -1,4 +1,7 @@
 import numpy as np
+from scipy import constants as const
+import scipy.integrate as integrate
+import scipy as sp
 
 def molar_mass(element):
     """
@@ -31,6 +34,84 @@ def molar_mass(element):
                 'Og': 294}
     return mass_list[element]
 
+# caculate the moment of inertia of  molecule
+# 计算转动惯量
+def moment_of_inertia(molecule):
+    """
+    Calculation of moment of inertia
+    - param molecule: Molecule
+    - return: Moment of inertia
+    """
+    # read the molecule file
+    with open(molecule, 'r') as f:
+        lines = f.readlines()
+    # get the number of atoms
+    natoms = int(lines[0])
+    # get the coordinates of atoms
+    coordinates = np.zeros((natoms, 3))
+    for i in range(natoms):
+        coordinates[i, :] = np.array(lines[i + 2].split()[1:4], dtype=float)
+    # get the element of atoms
+    elements = []
+    for i in range(natoms):
+        elements.append(lines[i + 2].split()[0])
+    # get the mass of atoms
+    mass = np.zeros(natoms)
+    for i in range(natoms):
+        mass[i] = molar_mass(elements[i])
+    # calculate the moment of inertia
+    I = 0
+    for i in range(natoms):
+        for j in range(natoms):
+            if i == j:
+                continue
+            else:
+                I += mass[i] * mass[j] * np.linalg.norm(coordinates[i, :] - coordinates[j, :]) ** 2
+    return I
+
+# caculate the Spin multiplicity
+# 计算自旋多重度
+def spin_multiplicity(molecule):
+    """
+    Calculation of spin multiplicity
+    - param molecule: Molecule
+    - return: Spin multiplicity
+    """
+    # read the molecule file
+    with open(molecule, 'r') as f:
+        lines = f.readlines()
+    # get the number of atoms
+    natoms = int(lines[0])
+    # get the coordinates of atoms
+    coordinates = np.zeros((natoms, 3))
+    for i in range(natoms):
+        coordinates[i, :] = np.array(lines[i + 2].split()[1:4], dtype=float)
+    # get the element of atoms
+    elements = []
+    for i in range(natoms):
+        elements.append(lines[i + 2].split()[0])
+    # get the mass of atoms
+    mass = np.zeros(natoms)
+    for i in range(natoms):
+        mass[i] = molar_mass(elements[i])
+    # calculate the moment of inertia
+    I = 0
+    for i in range(natoms):
+        for j in range(natoms):
+            if i == j:
+                continue
+            else:
+                I += mass[i] * mass[j] * np.linalg.norm(coordinates[i, :] - coordinates[j, :]) ** 2
+    # calculate the spin multiplicity
+    S = 1 # spin of electron S是自旋角动量
+    while True:
+        if (2 * S + 1) ** 2 * I < 2 * const.physical_constants['Bohr radius'][0] ** 2:
+            S += 1
+        else:
+            break
+    return 2 * S + 1
+
+
 # Calculation of translational partition function
 def partition_function_translational(T, V, N, m):
     """
@@ -40,8 +121,8 @@ def partition_function_translational(T, V, N, m):
     - param N: Number of particles
     - return: Translational partition function
     """
-    k = 1.38064852e-23  # Boltzmann constant in J/K
-    h = 6.62607004e-34  # Planck constant in J*s
+    k = const.k  # Boltzmann constant: 1.38064852e-23 J/K
+    h = const.h  # Planck constant: 6.62607004e-34 J*s
     qt = (2 * np.pi * m * k * T / h ** 2) ** (3 * N / 2) * V ** N
     return qt
 
@@ -55,7 +136,7 @@ def partition_function_rotational(T, N, m, I):
     - param I: Moment of inertia in kg*m^2
     - return: Rotational partition function
     """
-    k = 1.38064852e-23  # Boltzmann constant in J/K
+    k = const.k  # Boltzmann constant: 1.38064852e-23 J/K
     qr = (8 * np.pi ** 2 * k * T / I) ** (N / 2) * (np.pi * I / m / k / T) ** (3 * N / 2)
     return qr
 
@@ -69,7 +150,7 @@ def partition_function_vibrational(T, N, m, w):
     - param w: Frequency in Hz
     - return: Vibrational partition function
     """
-    k = 1.38064852e-23  # Boltzmann constant in J/K
+    k = const.k  # Boltzmann constant: 1.38064852e-23 J/K
     qv = (2 * np.pi * m * k * T / w) ** (3 * N / 2)
     return qv
 
@@ -90,3 +171,20 @@ def partition_function(T, V, N, m, I, w):
     qv = partition_function_vibrational(T, N, m, w)
     q = qt * qr * qv
     return q
+
+# Calculation of thermodynamic energy U
+def thermodynamic_energy(T, V, N, m, I, w):
+    """
+    Calculation of thermodynamic energy U
+    - param T: Temperature in K
+    - param V: Volume in m^3
+    - param N: Number of particles
+    - param m: Mass of particle in kg
+    - param I: Moment of inertia in kg*m^2
+    - param w: Frequency in Hz
+    - return: Thermodynamic energy U
+    """
+    k = const.k  # Boltzmann constant: 1.38064852e-23 J/K
+    q = partition_function(T, V, N, m, I, w)
+    u = k * T * np.log(q)
+    return u

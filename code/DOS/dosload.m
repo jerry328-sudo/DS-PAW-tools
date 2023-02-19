@@ -1,12 +1,12 @@
 clc,clear
 jsond=loadjson('dos.json');
 for ii= 1:length(jsond.AtomInfo.Atoms)
-    dos(ii).atom = jsond.AtomInfo.Atoms{1, ii}.Element;
-    dos(ii).position = jsond.AtomInfo.Atoms{1, ii}.Position;
+    dos(ii).atom = jsond.AtomInfo.Atoms(1, ii).Element;
+    dos(ii).position = jsond.AtomInfo.Atoms(1, ii).Position;
     count_orbit = 1;
     for ii1 = 1:length(jsond.DosInfo.Spin1.ProjectDos)
-        if jsond.DosInfo.Spin1.ProjectDos{1, ii1}.AtomIndex == ii
-            orbit1{count_orbit} = jsond.DosInfo.Spin1.ProjectDos{1, ii1}.Contribution;
+        if jsond.DosInfo.Spin1.ProjectDos(1, ii1).AtomIndex == ii
+            orbit1{count_orbit} = jsond.DosInfo.Spin1.ProjectDos(1, ii1).Contribution;
             count_orbit = count_orbit +1;
         end
     end
