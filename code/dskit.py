@@ -15,7 +15,8 @@ try:
         choice = int(input('''You have selected the function of thermodynamic correction.
 
 Please enter the following function you want to use:
-101. Convert DS frequency calculation file to vasp file \n'''))
+101. Convert DS frequency calculation file to vasp file
+102. Thermal Corrections for Adsorbate \n'''))
 
     elif choice == 2:
         choice = int(input('''You have selected the function of structure setting.
@@ -47,6 +48,8 @@ dir = os.path.dirname(os.path.realpath(__file__))
 if choice == 101:
     # call the py file under the 'other tools' folder
     os.system('python ' + dir + "\\Thermodynamic_correction\\tran_fre_vasp.py")
+elif choice == 102:
+    os.system('python ' + dir + "\\Thermodynamic_correction\\Thermal_Corrections_for_Adsorbate.py")
 elif choice == 201:
     os.system('python ' + dir + "\\Structure_Settings\\set_fix_atom.py")
 elif choice == 202:
