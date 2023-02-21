@@ -4,6 +4,7 @@ import scipy.constants as sc
 from ase.thermochemistry import IdealGasThermo
 from ase import Atoms, Atom
 from ase.visualize import view
+import ase.units as units
 from pymatgen.core.structure import Molecule
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 import json
@@ -100,6 +101,8 @@ class thermochemistry():
         self.gibbs_energy = self.thermo.get_gibbs_energy(T, pressure=pressure, verbose=False)
         self.entropy = self.thermo.get_entropy(T, pressure=pressure, verbose=False)
         self.enthalpy = self.thermo.get_enthalpy(T, verbose=False)
+        # U = H - pV = H - nRT
+        self.internal_energy = self.enthalpy - sc.R * T / sc.N_A * units.J
 
 # %%
 print(""" +-------------------------- Warm Tips --------------------------+
@@ -118,7 +121,8 @@ else:
 
 print("""  -->> (02) Analyzing Molecular Symmetry Information...Done!
  Molecular Symmetry is: {}
- +---------------------------------------------------------------+""".format(thermo.symmetry))
+ rotational symmetry number is: {}
+ +---------------------------------------------------------------+""".format(thermo.symmetry, thermo.symmetrynumber))
 
 tempuerature = float(input(' Please input the temperature (K): \n'))
 pressure = float(input(' Please input the pressure (Atm): \n'))
@@ -152,15 +156,19 @@ print(""" U(T) = ZPE + Delta_U(0->T)
 string = """ Temperature (T)           :      {} K
  Pressure (P)              :      {} Pa
  Zero-point energy E_ZPE   :      {} eV
+ Thermal correction to U(T):      {} eV
  Thermal correction to H(T):      {} eV
  Thermal correction to G(T):      {} eV
  Entropy S                 :      {} eV/K
  Entropy contribution T*S  :      {} eV
-""".format(tempuerature, pressure * sc.atm, thermo.zpe, thermo.enthalpy, 
+""".format(tempuerature, pressure * sc.atm, thermo.zpe, thermo.internal_energy , thermo.enthalpy, 
         thermo.gibbs_energy, thermo.entropy, thermo.entropy * tempuerature)
 print(string)
 
 with open('thermoCorrection.txt', 'w') as f:
+    f.write(""" Molecular Symmetry: {}
+ rotational symmetry number: {}
+ +---------------------------------------------------------------+\n""".format(thermo.symmetry, thermo.symmetrynumber))
     f.write(string)
 
 # %%
