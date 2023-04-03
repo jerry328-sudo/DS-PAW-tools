@@ -45,7 +45,7 @@ def molar_mass(element):
 
 # 首先是读取frequency.json文件，构建热力学对象
 class thermochemistry():
-    def __init__(self, file_path='frequency.json'):
+    def __init__(self, file_path='frequency.json', geometry='nonlinear'):
         self.atoms = None
         self.symmetry_ckeck = None
         self.symmetrynumber = None
@@ -57,6 +57,7 @@ class thermochemistry():
         self.zpe = 0
         self.freq = None
         self.freq_list = None
+        self.geometry = geometry
         self.__read_data(file_path)
 
     def __read_data(self, file_path):
@@ -85,9 +86,24 @@ class thermochemistry():
         # 将单位从THz转为eV
         self.freq_list = np.array(self.freq_list) * sc.tera * sc.h * 1 / sc.e
         # For Gas, the last six are translation and rotation
-        self.freq_list = self.freq_list[:-6]
+        '''因为线性分子的振动自由度为(3N-5)。发现有三个虚频和两个非常小的频率，
+        这是平动和转动在振动自由度上的投影，直接忽略即可(VASPKIT自动判断并忽略)。
+        忽略最小的5个(线型分子)或6个(非线型分子)振动频率，并不是直接忽略了平动和转动的
+        贡献。而是通过平动和转动的配分函数另外计算其对热力学量的贡献。其中平动熵是气体
+        分子熵的主要贡献。'''
+        # sort the frequency and return the index
+        index = np.argsort(self.freq_list)
 
-    def thermochemistry_caculate(self, T, spin=0, pressure = 0, geometry='nonlinear'):
+        if self.geometry == 'linear':
+            self.freq_list = np.delete(self.freq_list, index[:5])
+            # self.freq_list = self.freq_list[:-5]
+        elif self.geometry == 'nonlinear':
+            self.freq_list = np.delete(self.freq_list, index[:6])
+            # self.freq_list = self.freq_list[:-6]
+        else:
+            raise ValueError('geometry must be linear or nonlinear')
+
+    def thermochemistry_caculate(self, T, spin=0, pressure = 0):
         '''Calculate the thermochemistry of adsorption molecule, the nuit is eV'''
         # 计算分子的热力学参数
         for energy in self.freq_list:
@@ -95,7 +111,7 @@ class thermochemistry():
         self.thermo = IdealGasThermo(vib_energies=self.freq_list,
                         atoms=self.atoms,
                         symmetrynumber=self.symmetrynumber,
-                        geometry=geometry,
+                        geometry=self.geometry,
                         spin=spin)
         pressure = pressure * sc.bar
         self.gibbs_energy = self.thermo.get_gibbs_energy(T, pressure=pressure, verbose=False)
@@ -109,6 +125,17 @@ print(""" +-------------------------- Warm Tips --------------------------+
    Included Vibrations, Translation, Rotation & Electron contributions.       
  GAS molecules should not be with any fix.       """)
 
+geometry = int(input(''' Please input the geometry of the molecule: 
+ (0: 'linear', 1: 'nonlinear')
+ WARNING! The 'monatomic' is not available!\n'''))
+if geometry == 0:
+    geometry = 'linear'
+elif geometry == 1:
+    geometry = 'nonlinear'
+else:
+    print('Wrong input!')
+    exit()
+
 print('-->> (01) Reading frequency.json File...', end=' ')
 
 if not os.path.exists('frequency.json'):
@@ -116,7 +143,7 @@ if not os.path.exists('frequency.json'):
     print('the file "frequency.json" does not exist!')
     exit()
 else:
-    thermo = thermochemistry()
+    thermo = thermochemistry(geometry=geometry)
     print('Done!')
 
 print("""  -->> (02) Analyzing Molecular Symmetry Information...Done!
@@ -130,23 +157,11 @@ spin = float(input(''' Please input the total electronic spin:
  (the total electronic spin. (0 for molecules in which all electrons are paired, 
  0.5 for a free radical with a single unpaired electron, 1.0 for a triplet with 
  two unpaired electrons, such as O_2.))\n'''))
-geometry = int(input(''' Please input the geometry of the molecule: 
- (0: 'monatomic', 1: 'linear', 2: 'nonlinear')\n'''))
-if geometry == 0:
-    geometry = 'monatomic'
-elif geometry == 1:
-    geometry = 'linear'
-elif geometry == 2:
-    geometry = 'nonlinear'
-else:
-    print('Wrong input!')
-    exit()
 
 print('-->> (03) Calculating Thermochemistry...', end=' ')
 thermo.thermochemistry_caculate(T=tempuerature, 
                                 spin=spin, 
-                                pressure=pressure, 
-                                geometry=geometry)
+                                pressure=pressure)
 print('Done!\n')
 print(""" +---------------------------------------------------------------+""")
 print(""" U(T) = ZPE + Delta_U(0->T)
