@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.append("f:\\code\\DS-PAW\\DS-PAW-tools\\code")
+sys.path.append("e:\\code\\DS-PAW\\DS-PAW-tools\\code")
 import functions.function_normal as fn
 
 # get the directory where the py file is located

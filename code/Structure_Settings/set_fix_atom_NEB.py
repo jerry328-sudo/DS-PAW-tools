@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.append("f:\\code\\DS-PAW\\DS-PAW-tools\\code")
+sys.path.append("e:\\code\\DS-PAW\\DS-PAW-tools\\code")
 import functions.function_normal as fn
 
 methode = input('Select a fixed method (by element (0) or by position (1)): ')

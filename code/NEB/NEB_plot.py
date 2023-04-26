@@ -1,6 +1,6 @@
 # %%
 import sys
-sys.path.append("f:\\code\\DS-PAW\\DS-PAW-tools\\code")
+sys.path.append("e:\\code\\DS-PAW\\DS-PAW-tools\\code")
 import functions.function_normal as fn
 import matplotlib.pyplot as plt
 import os
