@@ -3,16 +3,12 @@
 import numpy as np
 import scipy.constants as sc
 from ase.thermochemistry import HarmonicThermo
+import json
 import os
-import sys
-current_path = os.path.dirname(os.path.abspath(__file__))
-parent_path = os.path.dirname(current_path)
-sys.path.append(parent_path)
-import functions.aseFunction as af
 
 
 class thermochemistry():
-    def __init__(self, filename='frequency.h5'):
+    def __init__(self, filename='frequency.json'):
         '''- Read the frequency file frequency.json
         if the user assumes the pV term (in H = U + pV) is zero 
         this can also be interpreted as the Gibbs free energy
@@ -20,15 +16,16 @@ class thermochemistry():
         - Neglect PV contribution to translation for adsorbed molecules.
         To avoid abnormal entropy contribution,
         frequencies less than 50 cm-1 are set to 50 cm-1.'''
-        freInfo = af.freLoad(filename)
+        with open(filename, 'r') as f:
+            self.data = json.load(f)
+        self.freq = np.array(self.data['FrequencyInfo'])
         self.freq_list = []
-        for i in freInfo.Frequency:
+        for i in self.freq:
         # 将小于50cm-1的频率设置为50cm-1
-            if i < 1.5:
+            if i['eigenvalues']['frequency'] < 1.5:
                 self.freq_list.append(1.5)
             else:
-                self.freq_list.append(i)
-        # self.freq_list = freInfo.Frequency
+                self.freq_list.append(i['eigenvalues']['frequency'])
         # 将单位从THz转为eV
         self.freq_list = np.array(self.freq_list) * sc.tera * sc.h * 1 / sc.e
         self.gibbs_energy = None
