@@ -142,8 +142,14 @@ class freLoad:
                 temp2 = []
         Elements = temp1
         # 读取结构信息
-        Fix = [x.astype(np.float64) for x in data["AtomInfo"]["Fix"]]
-        Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+        if "Fix" in data["AtomInfo"]:
+            Fix = [x.astype(np.float64) for x in data["AtomInfo"]["Fix"]]
+        else:
+            Fix = np.zeros(len(Elements))
+        if "Mag" in data["AtomInfo"]:
+            Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+        else:
+            Mag = np.zeros(len(Elements))
         Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
         Position = np.array(Position)
         Position = Position.reshape(-1, 3)

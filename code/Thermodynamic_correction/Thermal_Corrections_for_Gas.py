@@ -37,8 +37,8 @@ class thermochemistry():
         # 读取原子信息
         self.atoms = af.freLoad(file_path)
         # 检查对称性
-        mol = Molecule(species=self.atoms.get_chemical_symbols(), 
-                    coords=self.atoms.get_positions())
+        mol = Molecule(species=self.atoms.atoms.get_chemical_symbols(),
+                    coords=self.atoms.atoms.get_positions())
         self.symmetry_ckeck = PointGroupAnalyzer(mol)
         self.symmetrynumber = self.symmetry_ckeck.get_rotational_symmetry_number()
         #len(self.symmetry_ckeck.get_symmetry_operations())是错误的，应该是旋转对称数
@@ -73,7 +73,7 @@ class thermochemistry():
         for energy in self.freq_list:
             self.zpe += 0.5 * energy
         self.thermo = IdealGasThermo(vib_energies=self.freq_list,
-                        atoms=self.atoms,
+                        atoms=self.atoms.atoms,
                         symmetrynumber=self.symmetrynumber,
                         geometry=self.geometry,
                         spin=spin)
