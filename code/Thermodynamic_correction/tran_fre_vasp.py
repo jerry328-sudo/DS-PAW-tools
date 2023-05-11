@@ -38,10 +38,18 @@ for letter in Elements:
     elif letter == ";":
         temp1.append("".join(temp2))
         temp2 = []
+temp1.append("".join(temp2))
 Elements = temp1
 # 读取结构信息
-Fix = [x.astype(np.float64) for x in data["AtomInfo"]["Fix"]]
-Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+if "Fix" in data["AtomInfo"].keys():
+    Fix = [x.astype(np.float64) for x in data["AtomInfo"]["Fix"]]
+else:
+    Fix = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int)-1
+    Fix = Fix.tolist()   # 如果文件中没有Fix信息，则所有固定值设为-1
+if "Mag" in data["AtomInfo"].keys():
+    Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+else:
+    Mag = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int).tolist()
 Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
 Position = np.array(Position)
 Position = Position.reshape(-1, 3)

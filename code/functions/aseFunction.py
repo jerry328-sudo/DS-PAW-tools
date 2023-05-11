@@ -5,6 +5,25 @@ import re
 import ase.units as units
 import h5py
 import numpy as np
+import os
+
+def tran(fix):
+    if fix == 0:
+        return "F F F"
+    elif fix == 1:
+        return "F F T"
+    elif fix == 10:
+        return "F T F"
+    elif fix == 11:
+        return "F T T"
+    elif fix == 100:
+        return "T F F"
+    elif fix == 101:
+        return "T F T"
+    elif fix == 110:
+        return "T T F"
+    elif fix == 111:
+        return "T T T"
 
 def molar_mass(element):
     """
@@ -115,14 +134,21 @@ class freLoad:
     filename = None
     atoms = None
     fre_length = None
+    imfreLocate = None
     Frequency = []
     FrequencyType = []
     Unit = []
     EigenVectors = []
+    # position = []
+    # elements = []
     def __init__(self, filename = "frequency.h5"):
         self.filename = filename
         self.atoms = self.__structureLoad()
         self.__frequencyLoad()
+        for i in range(self.fre_length):
+            if self.FrequencyType[i] == 'f/i':
+                self.imFreLocate = i
+                break
     def __structureLoad(self):
         data = h5py.File('frequency.h5', 'r')
         CoordinateType = [x.decode('UTF-8') for x in data["AtomInfo"]["CoordinateType"]]
@@ -140,19 +166,24 @@ class freLoad:
             elif letter == ";":
                 temp1.append("".join(temp2))
                 temp2 = []
+        temp1.append("".join(temp2))
         Elements = temp1
+        # self.elements = Elements
         # 读取结构信息
         if "Fix" in data["AtomInfo"]:
-            Fix = [x.astype(np.float64) for x in data["AtomInfo"]["Fix"]]
+            Fix = np.array([x.astype(np.float64) for x in data["AtomInfo"]["Fix"]])
+            Fix = Fix.reshape(-1, 3)
+            Fix = Fix[:, 0]*100 + Fix[:, 1] * 10 + Fix[:, 2]
         else:
-            Fix = np.zeros(len(Elements))
+            Fix = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int) - 1 # 如果文件中没有Fix信息，则所有固定值设为-1
         if "Mag" in data["AtomInfo"]:
             Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
         else:
-            Mag = np.zeros(len(Elements))
+            Mag = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int).tolist()
         Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
         Position = np.array(Position)
         Position = Position.reshape(-1, 3)
+        # self.position = Position
         Lattice = [x.astype(np.float64) for x in data["AtomInfo"]["Lattice"]]
         Lattice = np.array(Lattice)
         Lattice = Lattice.reshape(-1, 3)
@@ -183,3 +214,27 @@ class freLoad:
             # 频率对应的本征矢量
             value = [x.astype(np.float64) for x in data["FrequencyInfo"]["EigenVectors"][str(i)]]
             self.EigenVectors.append(value)
+        self.Frequency = np.array(self.Frequency)
+        self.EigenVectors = np.array(self.EigenVectors)
+
+    def write_as_file(self, path=os.getcwd(), file='structure.as'):
+        '''- write the as file'''
+        with open(path + '\\' + file, 'w') as f:
+            f.write("Total number of atoms" + "\n")
+            f.write(str(len(self.atoms)) + "\n")
+            f.write("Lattice" + "\n")
+            for i in range(3):
+                f.write('%.08f'%self.atoms.cell[i][0] + " " + '%.08f'%self.atoms.cell[i][1] + " " + '%.08f'%self.atoms.cell[i][2] + "\n")
+            f.write("Cartesian Mag")
+            if self.atoms[0].tag != -1:
+                f.write(" Fix_x Fix_y Fix_z" + "\n")
+            else:
+                f.write("\n")
+            for i in range(len(self.atoms)):
+                f.write(self.atoms[i].symbol + " ")
+                f.write('%.08f'%self.atoms[i].position[0] + " " + '%.08f'%self.atoms[i].position[1] + " " + '%.08f'%self.atoms[i].position[2] + " ")
+                f.write(str(self.atoms[i].magmom))
+                if self.atoms[0].tag != -1:
+                    f.write(" " + tran(self.atoms[i].tag) + "\n")
+                else:
+                    f.write("\n")

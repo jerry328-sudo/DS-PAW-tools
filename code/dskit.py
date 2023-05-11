@@ -27,7 +27,8 @@ Please enter the following function you want to use:
 201. Set fixed atoms
 202. Randomly dope atom
 203. Set fixed atoms for NEB operation 
-204. fix molecule\n'''))
+204. fix molecule
+205. imaginary frequency correction\n'''))
 
     elif choice == 3:
         choice = int(input('''You have selected the function of NEB tools.
@@ -63,6 +64,8 @@ elif choice == 203:
     os.system('python ' + dir + "\\Structure_Settings\\set_fix_atom_NEB.py")
 elif choice == 204:
     os.system('python ' + dir + "\\Structure_Settings\\fix_molecule.py")
+elif choice == 205:
+    os.system('python ' + dir + "\\Structure_Settings\\Imaginary_frequency_correction.py")
 elif choice == 301:
     os.system('python ' + dir + "\\NEB\\NEB_plot.py")
 elif choice == 901:
