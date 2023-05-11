@@ -217,9 +217,156 @@ class freLoad:
         self.Frequency = np.array(self.Frequency)
         self.EigenVectors = np.array(self.EigenVectors)
 
-    def write_as_file(self, path=os.getcwd(), file='structure.as'):
+    def write_as_file(self, path=os.getcwd(), filename='structure.as'):
         '''- write the as file'''
-        with open(path + '\\' + file, 'w') as f:
+        with open(path + '\\' + filename, 'w') as f:
+            f.write("Total number of atoms" + "\n")
+            f.write(str(len(self.atoms)) + "\n")
+            f.write("Lattice" + "\n")
+            for i in range(3):
+                f.write('%.08f'%self.atoms.cell[i][0] + " " + '%.08f'%self.atoms.cell[i][1] + " " + '%.08f'%self.atoms.cell[i][2] + "\n")
+            f.write("Cartesian Mag")
+            if self.atoms[0].tag != -1:
+                f.write(" Fix_x Fix_y Fix_z" + "\n")
+            else:
+                f.write("\n")
+            for i in range(len(self.atoms)):
+                f.write(self.atoms[i].symbol + " ")
+                f.write('%.08f'%self.atoms[i].position[0] + " " + '%.08f'%self.atoms[i].position[1] + " " + '%.08f'%self.atoms[i].position[2] + " ")
+                f.write(str(self.atoms[i].magmom))
+                if self.atoms[0].tag != -1:
+                    f.write(" " + tran(self.atoms[i].tag) + "\n")
+                else:
+                    f.write("\n")
+
+class relaxLoad:
+    RelaxTraj = [] # 弛豫轨迹
+    Force = [] # 轨迹中每一帧的受力信息
+    atoms_initial = None # 初始结构信息
+    atoms_final = None # 最终结构信息
+    energy = {}
+    def __init__(self, filename = "relax.h5"):
+        self.filename = filename
+        self.__structureLoad()
+    def __structureLoad(self):
+        # 读取初始原子信息
+        data = h5py.File(self.filename, 'r')
+        CoordinateType = [x.decode('UTF-8') for x in data["AtomInfo"]["CoordinateType"]]
+        CoordinateType = "".join(CoordinateType)
+        if CoordinateType == "Cartesian":
+            pass
+        else:
+            raise ValueError("CoordinateType is not Cartesian")
+        Elements = [x.decode('UTF-8') for x in data["AtomInfo"]["Elements"]]
+        temp1 = [] # 将Elements中的符号转换为正常的格式
+        temp2 = []
+        for letter in Elements:
+            if letter != ";":
+                temp2.append(letter)
+            elif letter == ";":
+                temp1.append("".join(temp2))
+                temp2 = []
+        temp1.append("".join(temp2))
+        Elements = temp1
+        # self.elements = Elements
+        # 结构固定信息
+        if "Fix" in data["AtomInfo"]:
+            Fix = np.array([x.astype(np.float64) for x in data["AtomInfo"]["Fix"]])
+            Fix = Fix.reshape(-1, 3)
+            Fix = Fix[:, 0]*100 + Fix[:, 1] * 10 + Fix[:, 2]
+        else:
+            Fix = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int) - 1 # 如果文件中没有Fix信息，则所有固定值设为-1
+        # 读取初始磁矩信息
+        if "Mag" in data["AtomInfo"]:
+            InitialMag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+        else:
+            InitialMag = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int).tolist()
+        Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
+        Position = np.array(Position)
+        Position = Position.reshape(-1, 3)
+        # self.position = Position
+        Lattice = [x.astype(np.float64) for x in data["AtomInfo"]["Lattice"]]
+        Lattice = np.array(Lattice)
+        Lattice = Lattice.reshape(-1, 3)
+        # 构造原子类
+        self.atoms_initial = Atoms(cell = Lattice, pbc = True)
+        for i in range(len(Elements)):
+            atom = Atom(symbol = Elements[i], 
+                        position = Position[i], 
+                        mass = molar_mass(Elements[i]),
+                        magmom = InitialMag[i], tag = Fix[i])
+            self.atoms_initial.append(atom)
+
+        if "MagInfo" in data:
+            FinalMag = [x.astype(np.float64) for x in data["MagInfo"]["TotalMagOnAtom"]]
+        else:
+            FinalMag = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int).tolist()
+        # self.Force = []
+        # self.RelaxTraj = []
+
+        # 读取结构弛豫信息
+        for i in range(1,data["Structures"]["FinalStep"][0]+1):
+            key = "Step-" + str(i)
+            # 首先读取受力信息
+            force = [x.astype(np.float64) for x in data["Structures"][key]["Force"]]
+            force = np.array(force)
+            force = force.reshape(-1, 3)
+            self.Force.append(force)
+            # 读取原子磁矩信息 mag
+            if "Mag" in data["Structures"][key]:
+                mag = [x.astype(np.float64) for x in data["Structures"][key]["Mag"]]
+                if len(mag) == len(Elements):
+                    pass
+                else:
+                    raise ValueError("The spin is not collinear!")
+                mag = np.array(mag)
+            # 读取晶胞信息 lattice_relax
+            lattice_relax = [x.astype(np.float64) for x in data["Structures"][key]["Lattice"]]
+            lattice_relax = np.array(lattice_relax)
+            lattice_relax = lattice_relax.reshape(-1, 3)
+            # 读取原子位置信息 position_relax
+            position_relax = [x.astype(np.float64) for x in data["Structures"][key]["Position"]]
+            position_relax = np.array(position_relax)
+            position_relax = position_relax.reshape(-1, 3)
+            # 虽然它写的是笛卡尔坐标系，但是实际上是分数坐标系
+            position_relax = np.dot(position_relax, lattice_relax)
+            # 构造当前步骤的原子类 atoms_relax
+            atoms_relax = Atoms(cell = lattice_relax, pbc = True)
+            for j in range(len(Elements)):
+                atom = Atom(symbol = Elements[j], 
+                            position = position_relax[j], 
+                            mass = molar_mass(Elements[j]),
+                            magmom = mag[j], tag = Fix[j])
+                atoms_relax.append(atom)
+            self.RelaxTraj.append(atoms_relax) # 将当前步骤的原子类加入弛豫轨迹
+
+        # 最终结构信息
+        self.atoms_final = self.RelaxTraj[-1]
+        # 校验磁矩信息
+        if sum(self.atoms_final.get_initial_magnetic_moments() - FinalMag) != 0:
+            raise ValueError("The magnetic moments are not consistent!(code bug, fix it!)")
+
+        # 读取能量信息
+        self.energy = {
+            "EFermi": data["Energy"]["EFermi"][0].astype(np.float64),
+            "TotalEnergy": data["Energy"]["TotalEnergy"][0].astype(np.float64),
+            "TotalEnergy0": data["Energy"]["TotalEnergy0"][0].astype(np.float64),
+            "VdwCorrection": data["VdwCorrection"][0].astype(np.float64),
+        }
+
+    def write_as_file(self, path=os.getcwd(), filename='structure_new.as', save_kind = 'final'):
+        '''- write the as file
+        - path: the path to save the file
+        - file: the name of the file
+        - save_kind: the kind of structure to save, 'initial', 'final' or the index of the structure in the RelaxTraj
+        '''
+        if save_kind == 'initial':
+            self.atoms = self.atoms_initial
+        elif save_kind == 'final':
+            self.atoms = self.atoms_final
+        elif isinstance(save_kind, int):
+            self.atoms = self.RelaxTraj[save_kind]
+        with open(path + '\\' + filename, 'w') as f:
             f.write("Total number of atoms" + "\n")
             f.write(str(len(self.atoms)) + "\n")
             f.write("Lattice" + "\n")
