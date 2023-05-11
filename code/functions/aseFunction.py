@@ -179,7 +179,7 @@ class freLoad:
         if "Mag" in data["AtomInfo"]:
             Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
         else:
-            Mag = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int).tolist()
+            Mag = np.zeros(len(Elements), dtype=np.float64).tolist()
         Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
         Position = np.array(Position)
         Position = Position.reshape(-1, 3)
@@ -300,7 +300,7 @@ class relaxLoad:
         if "MagInfo" in data:
             FinalMag = [x.astype(np.float64) for x in data["MagInfo"]["TotalMagOnAtom"]]
         else:
-            FinalMag = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int).tolist()
+            FinalMag = np.zeros(len(Elements), dtype=np.float64).tolist()
         # self.Force = []
         # self.RelaxTraj = []
 
@@ -320,6 +320,8 @@ class relaxLoad:
                 else:
                     raise ValueError("The spin is not collinear!")
                 mag = np.array(mag)
+            else:
+                mag = np.zeros(len(Elements), dtype=int).tolist()
             # 读取晶胞信息 lattice_relax
             lattice_relax = [x.astype(np.float64) for x in data["Structures"][key]["Lattice"]]
             lattice_relax = np.array(lattice_relax)
