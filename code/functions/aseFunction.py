@@ -244,6 +244,7 @@ class relaxLoad:
     Force = [] # 轨迹中每一帧的受力信息
     atoms_initial = None # 初始结构信息
     atoms_final = None # 最终结构信息
+    electron_number = None # 电子数
     energy = {}
     def __init__(self, filename = "relax.h5"):
         self.filename = filename
@@ -296,9 +297,12 @@ class relaxLoad:
                         mass = molar_mass(Elements[i]),
                         magmom = InitialMag[i], tag = Fix[i])
             self.atoms_initial.append(atom)
-
+        check = 1
         if "MagInfo" in data:
-            FinalMag = [x.astype(np.float64) for x in data["MagInfo"]["TotalMagOnAtom"]]
+            if "TotalMagOnAtom" in data["MagInfo"]:
+                FinalMag = [x.astype(np.float64) for x in data["MagInfo"]["TotalMagOnAtom"]]
+            else:
+                check = 0
         else:
             FinalMag = np.zeros(len(Elements), dtype=np.float64).tolist()
         # self.Force = []
@@ -345,15 +349,18 @@ class relaxLoad:
         # 最终结构信息
         self.atoms_final = self.RelaxTraj[-1]
         # 校验磁矩信息
-        if sum(self.atoms_final.get_initial_magnetic_moments() - FinalMag) != 0:
-            raise ValueError("The magnetic moments are not consistent!(code bug, fix it!)")
+        if check == 1:
+            if sum(self.atoms_final.get_initial_magnetic_moments() - FinalMag) != 0:
+                raise ValueError("The magnetic moments are not consistent!(code bug, fix it!)")
 
+        self.electron_number = data["Electron"][0].astype(np.float64)
         # 读取能量信息
         self.energy = {
             "EFermi": data["Energy"]["EFermi"][0].astype(np.float64),
             "TotalEnergy": data["Energy"]["TotalEnergy"][0].astype(np.float64),
             "TotalEnergy0": data["Energy"]["TotalEnergy0"][0].astype(np.float64),
             "VdwCorrection": data["VdwCorrection"][0].astype(np.float64),
+            "ElectronNumber": self.electron_number
         }
 
     def write_as_file(self, path=os.getcwd(), filename='structure_new.as', save_kind = 'final'):
