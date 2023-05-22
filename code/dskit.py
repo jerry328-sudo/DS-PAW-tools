@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import functions.function_normal as fn
 import subprocess
@@ -6,7 +7,7 @@ print('Please select the function you want to use:')
 print('1. Thermodynamic correction')
 print('2. Structure setting')
 print('3. NEB tools')
-print('4. File processing')
+print('4. Input-Files Generator')
 print('9. others')
 
 # Select the function
@@ -38,10 +39,11 @@ Please enter the following function you want to use:
 301. Plot NEB reaction coordinate \n'''))
         
     elif choice == 4:
-        choice = int(input('''You have selected the function of file processing.
+        choice = int(input('''You have selected the function of Input-Files Generator.
         
 Please enter the following function you want to use:
-401. Read the relax.h5 file, get relaxed structure and energy \n'''))
+401. Read the relax.h5 file, get relaxed structure and energy
+402. Get the kpoints mesh \n'''))
         
     elif choice == 9:
         choice = int(input('''You have selected the function of others.
@@ -76,7 +78,9 @@ elif choice == 205:
 elif choice == 301:
     os.system('python ' + dir + "\\NEB\\NEB_plot.py")
 elif choice == 401:
-    os.system('python ' + dir + "\\file_processing\\read_relax.py")
+    os.system('python ' + dir + "\\Input-Files_Generator\\read_relax.py")
+elif choice == 402:
+    os.system('python ' + dir + "\\Input-Files_Generator\\get_kpoints.py")
 elif choice == 901:
     os.system('python ' + dir + "\\other_tools\\maxforce_convergence_plot.py")
 

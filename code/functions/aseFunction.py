@@ -1,4 +1,20 @@
-# %%
+#!/usr/bin/env python
+"""
+This module provides some useful functions for ASE.
+Here is a list of functions:
+    - molar_mass: Calculation of molar mass
+    - write_structure(structure, file="structure.as")(strongly not recommended): Write structure to file
+    - read_hzw(file = None, magmoms = None)
+    - read_as(file = "structure.as")
+    - class freLoad
+        - __init__(self, filename = "frequency.h5")
+        - write_as_file(self, path=os.getcwd(), filename='structure.as')
+    - class relaxLoad
+        - __init__(self, filename = "relax.h5")
+        - write_as_file(self, path=os.getcwd(), filename='structure_new.as', save_kind = 'final')
+"""
+
+
 from ase import Atoms, Atom
 from ase.visualize import view
 import re
@@ -6,6 +22,19 @@ import ase.units as units
 import h5py
 import numpy as np
 import os
+# np.set_printoptions(suppress=True)
+
+def tranf2num(fix):
+    s1 = 0
+    s2 = 0
+    s3 = 0
+    if fix[0] == "T":
+        s1 = 100
+    if fix[1] == "T":
+        s2 = 10
+    if fix[2] == "T":
+        s3 = 1
+    return s1+s2+s3
 
 def tran(fix):
     if fix == 0:
@@ -121,6 +150,41 @@ def read_hzw(file = None, magmoms = None):
             atom_index += 1
     return structure
 
+def read_as(file = "structure.as"):
+    with open(file, "r") as f:
+        lines = f.readlines()
+        lines_split = [line.split() for line in lines]
+    # read the lattice
+    lattice = []
+    for i in range(3,6):
+        lattice.append([float(num) for num in lines_split[i][:3]])
+    atoms = Atoms(cell = lattice, pbc = True)
+    # read the atoms
+    sign = 0
+    if "Mag" in lines_split[6]:
+        signm = 1
+    else:
+        signm = 0
+    if "Fix_x" in lines_split[6]:
+        signf = 10
+    else:
+        signf = 0
+    sign = signm + signf
+    for i in range(7, len(lines_split)):
+        element = lines_split[i][0]
+        position = [float(num) for num in lines_split[i][1:4]]
+        if sign == 0:
+            atom = Atom(symbol = element, position = position, mass = molar_mass(element))
+        elif sign == 1:
+            atom = Atom(symbol = element, position = position, mass = molar_mass(element), magmom = float(lines_split[i][4]))
+        elif sign == 10:
+            fix = tranf2num(lines_split[i][4:7])
+            atom = Atom(symbol = element, position = position, mass = molar_mass(element), tag = fix)
+        elif sign == 11:
+            fix = tranf2num(lines_split[i][5:8])
+            atom = Atom(symbol = element, position = position, mass = molar_mass(element), magmom = float(lines_split[i][4]), tag = fix)
+        atoms.append(atom)
+    return atoms
 
 class freLoad:
     """def __init__(self, filename = "frequency.h5"):
@@ -219,21 +283,24 @@ class freLoad:
 
     def write_as_file(self, path=os.getcwd(), filename='structure.as'):
         '''- write the as file'''
+        latt_form = ' %19.6f'
+        cform = ' %19.16f'
+        element_form = ' %2s'
         with open(path + '\\' + filename, 'w') as f:
             f.write("Total number of atoms" + "\n")
             f.write(str(len(self.atoms)) + "\n")
             f.write("Lattice" + "\n")
             for i in range(3):
-                f.write('%.08f'%self.atoms.cell[i][0] + " " + '%.08f'%self.atoms.cell[i][1] + " " + '%.08f'%self.atoms.cell[i][2] + "\n")
+                f.write(latt_form % self.atoms.cell[i][0] + " " + latt_form % self.atoms.cell[i][1] + " " + latt_form % self.atoms.cell[i][2] + "\n")
             f.write("Cartesian Mag")
             if self.atoms[0].tag != -1:
                 f.write(" Fix_x Fix_y Fix_z" + "\n")
             else:
                 f.write("\n")
             for i in range(len(self.atoms)):
-                f.write(self.atoms[i].symbol + " ")
-                f.write('%.08f'%self.atoms[i].position[0] + " " + '%.08f'%self.atoms[i].position[1] + " " + '%.08f'%self.atoms[i].position[2] + " ")
-                f.write(str(self.atoms[i].magmom))
+                f.write(element_form % self.atoms[i].symbol + " ")
+                f.write(cform % self.atoms[i].position[0] + " " + cform % self.atoms[i].position[1] + " " + cform % self.atoms[i].position[2] + " ")
+                f.write(cform % self.atoms[i].magmom)
                 if self.atoms[0].tag != -1:
                     f.write(" " + tran(self.atoms[i].tag) + "\n")
                 else:
@@ -369,6 +436,9 @@ class relaxLoad:
         - file: the name of the file
         - save_kind: the kind of structure to save, 'initial', 'final' or the index of the structure in the RelaxTraj
         '''
+        latt_form = ' %19.6f'
+        cform = ' %19.16f'
+        element_form = ' %2s'
         if save_kind == 'initial':
             self.atoms = self.atoms_initial
         elif save_kind == 'final':
@@ -380,16 +450,16 @@ class relaxLoad:
             f.write(str(len(self.atoms)) + "\n")
             f.write("Lattice" + "\n")
             for i in range(3):
-                f.write('%.08f'%self.atoms.cell[i][0] + " " + '%.08f'%self.atoms.cell[i][1] + " " + '%.08f'%self.atoms.cell[i][2] + "\n")
+                f.write(latt_form % self.atoms.cell[i][0] + " " + latt_form % self.atoms.cell[i][1] + " " + latt_form % self.atoms.cell[i][2] + "\n")
             f.write("Cartesian Mag")
             if self.atoms[0].tag != -1:
                 f.write(" Fix_x Fix_y Fix_z" + "\n")
             else:
                 f.write("\n")
             for i in range(len(self.atoms)):
-                f.write(self.atoms[i].symbol + " ")
-                f.write('%.08f'%self.atoms[i].position[0] + " " + '%.08f'%self.atoms[i].position[1] + " " + '%.08f'%self.atoms[i].position[2] + " ")
-                f.write(str(self.atoms[i].magmom))
+                f.write(element_form % self.atoms[i].symbol + " ")
+                f.write(cform % self.atoms[i].position[0] + " " + cform % self.atoms[i].position[1] + " " + cform % self.atoms[i].position[2] + " ")
+                f.write(cform % self.atoms[i].magmom)
                 if self.atoms[0].tag != -1:
                     f.write(" " + tran(self.atoms[i].tag) + "\n")
                 else:
