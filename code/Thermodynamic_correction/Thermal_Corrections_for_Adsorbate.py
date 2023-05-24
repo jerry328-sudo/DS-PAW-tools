@@ -21,6 +21,7 @@ class thermochemistry():
         To avoid abnormal entropy contribution,
         frequencies less than 50 cm-1 are set to 50 cm-1.'''
         freInfo = af.freLoad(filename)
+        freInfo.write_jmol() # 生成jmol文件
         self.freq_list = []
         for i in freInfo.Frequency:
         # 将小于50cm-1的频率设置为50cm-1

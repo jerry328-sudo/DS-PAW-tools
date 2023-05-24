@@ -191,14 +191,15 @@ class freLoad:
     filename;
     atoms;
     fre_length;
-    Frequency;
+    Frequency; np.array
     FrequencyType;
     Unit;
-    EigenVectors"""
+    EigenVectors; np.array"""
     filename = None
     atoms = None
     fre_length = None
     imfreLocate = None
+    name='vib'
     Frequency = []
     FrequencyType = []
     Unit = []
@@ -305,6 +306,44 @@ class freLoad:
                     f.write(" " + tran(self.atoms[i].tag) + "\n")
                 else:
                     f.write("\n")
+    
+    def write_jmol(self, name = "vibration"):
+        """Writes file for viewing of the modes with jmol."""
+        self.name = name
+        with open(self.name + '.xyz', 'w') as fd:
+            self._write_jmol(fd)
+
+    def _write_jmol(self, fd):
+        symbols = self.atoms.get_chemical_symbols()
+        freq = self.Frequency
+        # Convert to cm^-1 if necessary
+        # 暂时默认单位为THz吧，后面有需要再改
+        if self.Unit[0] == "THz":
+            freq = np.around(freq * 33.35641, decimals=6) # 1 THz = 33.35641 cm^-1
+        else:
+            raise ValueError("The unit of frequency is not THz.")
+        for n in range(len(freq)):
+            # 写入原子数量
+            fd.write('%6d\n' % len(self.atoms))
+            # 确定是否为虚频
+            if self.FrequencyType[n] == "f/i":
+                c = 'i'
+            else:
+                c = ' '
+            # 写入频率信息
+            fd.write('Mode #%d, f = %.1f%s cm^-1.\n'
+                     % (n, float(freq[n]), c))
+            # # 写入强度信息
+            # if self.ir:
+            #     fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
+            # else:
+            #     fd.write('.\n')
+            # 写入原子信息
+            mode = self.EigenVectors[n]
+            for i, pos in enumerate(self.atoms.positions):
+                fd.write('%2s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f\n' %
+                         (symbols[i], pos[0], pos[1], pos[2],
+                          mode[i, 0], mode[i, 1], mode[i, 2]))
 
 class relaxLoad:
     RelaxTraj = [] # 弛豫轨迹
@@ -419,16 +458,19 @@ class relaxLoad:
         if check == 1:
             if sum(self.atoms_final.get_initial_magnetic_moments() - FinalMag) != 0:
                 raise ValueError("The magnetic moments are not consistent!(code bug, fix it!)")
-
-        self.electron_number = data["Electron"][0].astype(np.float64)
-        # 读取能量信息
-        self.energy = {
-            "EFermi": data["Energy"]["EFermi"][0].astype(np.float64),
-            "TotalEnergy": data["Energy"]["TotalEnergy"][0].astype(np.float64),
-            "TotalEnergy0": data["Energy"]["TotalEnergy0"][0].astype(np.float64),
-            "VdwCorrection": data["VdwCorrection"][0].astype(np.float64),
-            "ElectronNumber": self.electron_number
-        }
+        if "Electron" in data:
+            self.electron_number = data["Electron"][0].astype(np.float64)
+            # 读取能量信息
+            self.energy = {
+                "EFermi": data["Energy"]["EFermi"][0].astype(np.float64),
+                "TotalEnergy": data["Energy"]["TotalEnergy"][0].astype(np.float64),
+                "TotalEnergy0": data["Energy"]["TotalEnergy0"][0].astype(np.float64),
+                "VdwCorrection": data["VdwCorrection"][0].astype(np.float64),
+                "ElectronNumber": self.electron_number
+            }
+        else:
+            self.electron_number = "Unknown"
+            self.energy = None
 
     def write_as_file(self, path=os.getcwd(), filename='structure_new.as', save_kind = 'final'):
         '''- write the as file

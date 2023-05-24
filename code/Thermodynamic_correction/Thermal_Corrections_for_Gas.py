@@ -36,6 +36,7 @@ class thermochemistry():
     def __read_data(self, file_path):
         # 读取原子信息
         self.atoms = af.freLoad(file_path)
+        self.atoms.write_jmol() # 生成jmol文件
         # 检查对称性
         mol = Molecule(species=self.atoms.atoms.get_chemical_symbols(),
                     coords=self.atoms.atoms.get_positions())
