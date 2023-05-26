@@ -318,10 +318,10 @@ class freLoad:
         freq = self.Frequency
         # Convert to cm^-1 if necessary
         # 暂时默认单位为THz吧，后面有需要再改
-        if self.Unit[0] == "THz":
-            freq = np.around(freq * 33.35641, decimals=6) # 1 THz = 33.35641 cm^-1
-        else:
-            raise ValueError("The unit of frequency is not THz.")
+        # if self.Unit[0] == "THz":
+        #     freq = np.around(freq * 33.35641, decimals=6) # 1 THz = 33.35641 cm^-1
+        # else:
+        #     raise ValueError("The unit of frequency is not THz.")
         for n in range(len(freq)):
             # 写入原子数量
             fd.write('%6d\n' % len(self.atoms))
@@ -331,8 +331,8 @@ class freLoad:
             else:
                 c = ' '
             # 写入频率信息
-            fd.write('Mode #%d, f = %.1f%s cm^-1.\n'
-                     % (n, float(freq[n]), c))
+            fd.write('Mode #%d, f = %.4f%s ' % (n, float(freq[n]), c))
+            fd.write('%s\n' % self.Unit[n])
             # # 写入强度信息
             # if self.ir:
             #     fd.write(', I = %.4f (D/Å)^2 amu^-1.\n' % self.intensities[n])
