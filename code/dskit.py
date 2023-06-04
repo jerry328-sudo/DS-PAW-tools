@@ -36,7 +36,8 @@ Please enter the following function you want to use:
         choice = int(input('''You have selected the function of NEB tools.
 
 Please enter the following function you want to use:
-301. Plot NEB reaction coordinate \n'''))
+301. Plot NEB reaction coordinate 
+302. Set the initial magnetic moments of NEB structure \n'''))
         
     elif choice == 4:
         choice = int(input('''You have selected the function of Input-Files Generator.
@@ -77,6 +78,8 @@ elif choice == 205:
     os.system('python ' + dir + "\\Structure_Settings\\Imaginary_frequency_correction.py")
 elif choice == 301:
     os.system('python ' + dir + "\\NEB\\NEB_plot.py")
+elif choice == 302:
+    os.system('python ' + dir + "\\NEB\\set_neb_mag.py")
 elif choice == 401:
     os.system('python ' + dir + "\\Input-Files_Generator\\read_relax.py")
 elif choice == 402:

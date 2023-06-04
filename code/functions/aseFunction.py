@@ -4,6 +4,7 @@ This module provides some useful functions for ASE.
 Here is a list of functions:
     - molar_mass: Calculation of molar mass
     - write_structure(structure, file="structure.as")(strongly not recommended): Write structure to file
+    - write_as_file(path=os.getcwd(), filename='structure.as', structure = None)
     - read_hzw(file = None, magmoms = None)
     - read_as(file = "structure.as")
     - class freLoad
@@ -185,6 +186,36 @@ def read_as(file = "structure.as"):
             atom = Atom(symbol = element, position = position, mass = molar_mass(element), magmom = float(lines_split[i][4]), tag = fix)
         atoms.append(atom)
     return atoms
+
+def write_as_file(path=os.getcwd(), filename='structure.as', structure = None):
+    '''- write the as file
+    - path: the path to save the file
+    - file: the name of the file
+    - structure: ASE Atoms object
+    '''
+    latt_form = ' %19.6f'
+    cform = ' %19.16f'
+    element_form = ' %2s'
+    atoms = structure
+    with open(path + '\\' + filename, 'w') as f:
+        f.write("Total number of atoms" + "\n")
+        f.write(str(len(atoms)) + "\n")
+        f.write("Lattice" + "\n")
+        for i in range(3):
+            f.write(latt_form % atoms.cell[i][0] + " " + latt_form % atoms.cell[i][1] + " " + latt_form % atoms.cell[i][2] + "\n")
+        f.write("Cartesian Mag")
+        if atoms[0].tag != -1:
+            f.write(" Fix_x Fix_y Fix_z" + "\n")
+        else:
+            f.write("\n")
+        for i in range(len(atoms)):
+            f.write(element_form % atoms[i].symbol + " ")
+            f.write(cform % atoms[i].position[0] + " " + cform % atoms[i].position[1] + " " + cform % atoms[i].position[2] + " ")
+            f.write(cform % atoms[i].magmom)
+            if atoms[0].tag != -1:
+                f.write(" " + tran(atoms[i].tag) + "\n")
+            else:
+                f.write("\n")
 
 class freLoad:
     """def __init__(self, filename = "frequency.h5"):
