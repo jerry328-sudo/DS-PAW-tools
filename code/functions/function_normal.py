@@ -9,6 +9,7 @@ import os
 import numpy as np
 import scipy.interpolate as si
 import matplotlib.pyplot as plt
+import h5py
 
 # read the as file class
 
@@ -247,16 +248,15 @@ def coordinate_transform(dos, coor):
     az = za[2]*coor[0] + zb[2]*coor[1] + zc[2]*coor[2]
     return [ax, ay, az]
 
-def plot_neb_barrier(neb_json, interp_kinds="cubic", data_clean=False, data_save=False):
+def plot_neb_barrier(neb_h5, interp_kinds="cubic", data_clean=False, data_save=False):
     '''给出插值的样条曲线的阶数
     'zero' 、'nearest'零阶
     'slinear' 、'linear'线性
     'quadratic' 、'cubic'二阶和三阶样条曲线,更高阶的曲线可以直接使用整数值指定'''
-    with open(neb_json,"r") as file:
-        neb = json.load(file)
-
-    reaction_coordinate = neb["Distance"]["ReactionCoordinate"]
-    energy = neb["Energy"]["TotalEnergy"]
+    neb = h5py.File(neb_h5, 'r')
+    data_form = ' %19.6f'
+    reaction_coordinate = neb['BarrierInfo']['ReactionCoordinate'][:]
+    energy = neb['BarrierInfo']['TotalEnergy'][:]
 
     x = []
     for c in reaction_coordinate:
@@ -284,10 +284,10 @@ def plot_neb_barrier(neb_json, interp_kinds="cubic", data_clean=False, data_save
         with open("neb_data.txt","w") as file:
             file.write('raw data'+'\n')
             for i in range(len(x)):
-                file.write(str(x[i])+'\t'+str(y[i])+'\n')
+                file.write(data_form % x[i] + '\t'+ data_form % y[i] + '\n')
             file.write('interpolation data'+'\n')
             for i in range(len(xnew)):
-                file.write(str(xnew[i])+" "+str(ynew[i])+"\n")
+                file.write(data_form % xnew[i] + " "+ data_form % ynew[i]+"\n")
 
     # 样条插值
     # tck = si.splrep(x, y, s=0)

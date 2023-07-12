@@ -8,6 +8,7 @@ print('1. Thermodynamic correction')
 print('2. Structure setting')
 print('3. NEB tools')
 print('4. Input-Files Generator')
+print('5. Post-processing')
 print('9. others')
 
 # Select the function
@@ -45,6 +46,12 @@ Please enter the following function you want to use:
 Please enter the following function you want to use:
 401. Read the relax.h5 file, get relaxed structure and energy
 402. Get the kpoints mesh \n'''))
+        
+    elif choice == 5:
+        choice = int(input('''You have selected the function of Post-processing.
+
+Please enter the following function you want to use:
+501. convert the pcharge.h5 to PARCHG \n'''))
         
     elif choice == 9:
         choice = int(input('''You have selected the function of others.
@@ -84,6 +91,8 @@ elif choice == 401:
     os.system('python ' + dir + "\\Input-Files_Generator\\read_relax.py")
 elif choice == 402:
     os.system('python ' + dir + "\\Input-Files_Generator\\get_kpoints.py")
+elif choice == 501:
+    os.system('python ' + dir + "\\Post_processing\\pcharge_to_PARCHG.py")
 elif choice == 901:
     os.system('python ' + dir + "\\other_tools\\maxforce_convergence_plot.py")
 

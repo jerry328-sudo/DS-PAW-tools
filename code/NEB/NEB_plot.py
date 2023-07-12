@@ -45,7 +45,7 @@ else:
 
 # %% MAIN CODE
 
-fn.plot_neb_barrier(neb_json=path + "\\neb.json", interp_kinds=interpolation_kind, data_clean=data_clean, data_save=data_save)
+fn.plot_neb_barrier(neb_h5=path + "\\neb.h5", interp_kinds=interpolation_kind, data_clean=data_clean, data_save=data_save)
 plt.xlabel('Reaction Coordinate', fontsize=16)
 plt.ylabel('Energy (eV)', fontsize=16)
 plt.tick_params(labelsize=16)

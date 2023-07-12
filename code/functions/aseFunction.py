@@ -4,6 +4,7 @@ This module provides some useful functions for ASE.
 Here is a list of functions:
     - molar_mass: Calculation of molar mass
     - write_structure(structure, file="structure.as")(strongly not recommended): Write structure to file
+    - write_CHGCAR(structure, grid, chgInfo, filename = "CHGCAR")
     - write_as_file(path=os.getcwd(), filename='structure.as', structure = None)
     - read_hzw(file = None, magmoms = None)
     - read_as(file = "structure.as")
@@ -13,6 +14,11 @@ Here is a list of functions:
     - class relaxLoad
         - __init__(self, filename = "relax.h5")
         - write_as_file(self, path=os.getcwd(), filename='structure_new.as', save_kind = 'final')
+    - class pchargeLoad
+        - __init__(self, filename = "pcharge.h5")
+    - class scfLoad
+        - __init__(self, filename = "scf.h5")
+        - write_bands_occupation(self)
 """
 
 
@@ -100,6 +106,44 @@ def write_structure(structure, file="structure.as"):
             f.write(" ".join([structure[i].symbol, " ".join(
                 [str(num) for num in structure[i].position.tolist()]), str(structure[i].magmom), "F F F"]) + "\n")
 
+def write_CHGCAR(structure, grid, chgInfo, filename = "CHGCAR"):
+    '''structure: Atoms类'''
+    latt_form = ' %19.6f'
+    cform = ' %19.16f'
+    element_form = ' %5s'
+    count = {}
+    with open(filename, 'w') as f:
+        f.write("".join(structure.get_chemical_formula(mode='hill')))
+        f.write("\n")
+        f.write("1.0\n")
+        for i in range(3):
+            f.write(latt_form % structure.cell[i][0])
+            f.write(latt_form % structure.cell[i][1])
+            f.write(latt_form % structure.cell[i][2])
+            f.write("\n")
+        for i in structure.get_chemical_symbols():
+            count[i] = count.get(i, 0) + 1
+        for i in count:
+            f.write(element_form % i)
+        f.write("\n")
+        for i in count:
+            f.write(element_form % count[i])
+        f.write("\n")
+        f.write("Cartesian\n")
+        for i in range(len(structure)):
+            f.write(cform % structure.positions[i][0])
+            f.write(cform % structure.positions[i][1])
+            f.write(cform % structure.positions[i][2])
+            f.write("\n")
+        f.write("\n")
+        f.write('  ' + " ".join([str(x) + " " for x in grid]))
+        f.write("\n")
+        for i, num in enumerate(chgInfo):
+            f.write(' %19.16e' % num)
+            if (i + 1) % 5 == 0:
+                f.write("\n")
+            else:
+                f.write(" ")
 
 def read_hzw(file = None, magmoms = None):
     '''读取hzw文件, 返回ase.Atoms类型, magmoms为字典类型, key为元素符号, value为对应元素的玻尔磁子数'''
@@ -537,3 +581,217 @@ class relaxLoad:
                     f.write(" " + tran(self.atoms[i].tag) + "\n")
                 else:
                     f.write("\n")
+
+class pchargeLoad:
+    """def __init__(self, filename = "pcharge.h5"):
+    filename;
+    atoms;
+    chgInfo
+    bandIndex
+    grid
+    """
+    
+    filename = None
+    atoms = None
+    chgInfo = {}
+    bandIndex = {}
+    grid = None
+    # position = []
+    # elements = []
+    def __init__(self, filename = "pcharge.h5"):
+        self.filename = filename
+        self.atoms = self.__structureLoad()
+        self.__pchargeLoad()
+    def __structureLoad(self):
+        data = h5py.File(self.filename, 'r')
+        CoordinateType = [x.decode('UTF-8') for x in data["AtomInfo"]["CoordinateType"]]
+        CoordinateType = "".join(CoordinateType)
+        Elements = [x.decode('UTF-8') for x in data["AtomInfo"]["Elements"]]
+        temp1 = [] # 将Elements中的符号转换为正常的格式
+        temp2 = []
+        for letter in Elements:
+            if letter != ";":
+                temp2.append(letter)
+            elif letter == ";":
+                temp1.append("".join(temp2))
+                temp2 = []
+        temp1.append("".join(temp2))
+        Elements = temp1
+        # self.elements = Elements
+        # 读取结构信息
+        if "Fix" in data["AtomInfo"]:
+            Fix = np.array([x.astype(np.float64) for x in data["AtomInfo"]["Fix"]])
+            Fix = Fix.reshape(-1, 3)
+            Fix = Fix[:, 0]*100 + Fix[:, 1] * 10 + Fix[:, 2]
+        else:
+            Fix = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int) - 1 # 如果文件中没有Fix信息，则所有固定值设为-1
+        if "Mag" in data["AtomInfo"]:
+            Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+        else:
+            Mag = np.zeros(len(Elements), dtype=np.float64).tolist()
+        Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
+        Position = np.array(Position)
+        Position = Position.reshape(-1, 3)
+        # self.position = Position
+        Lattice = [x.astype(np.float64) for x in data["AtomInfo"]["Lattice"]]
+        Lattice = np.array(Lattice)
+        Lattice = Lattice.reshape(-1, 3)
+        # 构造原子类
+        atoms = Atoms(cell = Lattice, pbc = True)
+        if CoordinateType == "Cartesian":
+            pass
+        else:
+            Position = Position.dot(Lattice)
+        for i in range(len(Elements)):
+            atom = Atom(symbol = Elements[i], 
+                        position = Position[i], 
+                        mass = molar_mass(Elements[i]),
+                        magmom = Mag[i], tag = Fix[i])
+            atoms.append(atom)
+        return atoms
+    def __pchargeLoad(self):
+        data = h5py.File(self.filename, 'r')
+        self.grid = data['AtomInfo']['Grid'][:]
+        for i in data["Pcharge"]:
+            try:
+                float(i)
+                self.chgInfo[i] = data["Pcharge"][i]['TotalCharge'][:]
+                self.bandIndex[i] = data["Pcharge"][i]['BandIndex'][:]
+            except:
+                pass
+
+class scfLoad:
+    """def __init__(self, filename = "pcharge.h5"):
+    filename;
+    atoms;
+    chgInfo
+    bandIndex
+    grid
+    """
+    filename = None
+    atoms = None
+    bandEnergies_Sorted_spin1 = {}
+    bandEnergies_Sorted_spin2 = {}
+    bandsIndex_Sorted_spin1 = {}
+    bandsIndex_Sorted_spin2 = {}
+    bandOccupation_Sorted_spin1 = {}
+    bandOccupation_Sorted_spin2 = {}
+    grid = None
+    kpointsNumber = None
+    bandsNumber = None
+    # position = []
+    # elements = []
+    def __init__(self, filename = "scf.h5"):
+        self.filename = filename
+        self.atoms = self.__structureLoad()
+        self.__bandLoad()
+    def __structureLoad(self):
+        data = h5py.File(self.filename, 'r')
+        CoordinateType = [x.decode('UTF-8') for x in data["AtomInfo"]["CoordinateType"]]
+        CoordinateType = "".join(CoordinateType)
+        Elements = [x.decode('UTF-8') for x in data["AtomInfo"]["Elements"]]
+        temp1 = [] # 将Elements中的符号转换为正常的格式
+        temp2 = []
+        for letter in Elements:
+            if letter != ";":
+                temp2.append(letter)
+            elif letter == ";":
+                temp1.append("".join(temp2))
+                temp2 = []
+        temp1.append("".join(temp2))
+        Elements = temp1
+        # self.elements = Elements
+        # 读取结构信息
+        if "Fix" in data["AtomInfo"]:
+            Fix = np.array([x.astype(np.float64) for x in data["AtomInfo"]["Fix"]])
+            Fix = Fix.reshape(-1, 3)
+            Fix = Fix[:, 0]*100 + Fix[:, 1] * 10 + Fix[:, 2]
+        else:
+            Fix = np.zeros(len(data["AtomInfo"]["Position"]), dtype=int) - 1 # 如果文件中没有Fix信息，则所有固定值设为-1
+        if "Mag" in data["AtomInfo"]:
+            Mag = [x.astype(np.float64) for x in data["AtomInfo"]["Mag"]]
+        else:
+            Mag = np.zeros(len(Elements), dtype=np.float64).tolist()
+        Position = [x.astype(np.float64) for x in data["AtomInfo"]["Position"]]
+        Position = np.array(Position)
+        Position = Position.reshape(-1, 3)
+        # self.position = Position
+        Lattice = [x.astype(np.float64) for x in data["AtomInfo"]["Lattice"]]
+        Lattice = np.array(Lattice)
+        Lattice = Lattice.reshape(-1, 3)
+        # 构造原子类
+        atoms = Atoms(cell = Lattice, pbc = True)
+        if CoordinateType == "Cartesian":
+            pass
+        else:
+            Position = Position.dot(Lattice)
+        for i in range(len(Elements)):
+            atom = Atom(symbol = Elements[i], 
+                        position = Position[i], 
+                        mass = molar_mass(Elements[i]),
+                        magmom = Mag[i], tag = Fix[i])
+            atoms.append(atom)
+        #/AtomInfo/Grid
+        self.grid = [int(x) for x in data["AtomInfo"]["Grid"]]
+        return atoms
+    def __bandLoad(self):
+        # 首先读取spin1的数据
+        data = h5py.File(self.filename, 'r')
+        temp = np.array(data["Eigenvalue"]["Spin1"]["BandEnergies"])
+        self.bandsNumber = temp.shape[0]
+        self.kpointsNumber = temp.shape[1]
+        bandEnergies_spin1 = {}
+        for i in range(self.kpointsNumber):
+            bandEnergies_spin1[i+1] = temp[:, i]
+            self.bandsIndex_Sorted_spin1[i+1] = np.argsort(bandEnergies_spin1[i+1])+1
+            self.bandEnergies_Sorted_spin1[i+1] = bandEnergies_spin1[i+1][self.bandsIndex_Sorted_spin1[i+1]-1]
+            bandsOccupation_spin1 = np.array(data["Eigenvalue"]["Spin1"]["Occupation"])
+            self.bandOccupation_Sorted_spin1[i+1] = bandsOccupation_spin1[:, i][self.bandsIndex_Sorted_spin1[i+1]-1]
+        # 读取spin2的数据
+        bandEnergies_spin2 = {}
+        if "Spin2" in data["Eigenvalue"]:
+            temp = np.array(data["Eigenvalue"]["Spin2"]["BandEnergies"])
+            for i in range(self.kpointsNumber):
+                bandEnergies_spin2[i+1] = temp[:, i]
+                self.bandsIndex_Sorted_spin2[i+1] = np.argsort(bandEnergies_spin2[i+1])+1
+                self.bandEnergies_Sorted_spin2[i+1] = bandEnergies_spin2[i+1][self.bandsIndex_Sorted_spin2[i+1]-1]
+                bandsOccupation_spin2 = np.array(data["Eigenvalue"]["Spin2"]["Occupation"])
+                self.bandOccupation_Sorted_spin2[i+1] = bandsOccupation_spin2[:, i][self.bandsIndex_Sorted_spin2[i+1]-1]
+        else:
+            self.bandEnergies_spin2 = None
+            self.bandsIndex_Sorted_spin2 = None
+            self.bandOccupation_Sorted_spin2 = None
+    def write_bands_occupation(self):
+        latt_form = ' %19.6f'
+        with open("bands_occupation_spin1.txt", "w") as f:
+            f.write("kpointsNumber = %d\n" % self.kpointsNumber)
+            for i in range(self.kpointsNumber):
+                f.write(" %19s" % "Index/KPoints{}".format(str(i+1)))
+                f.write(" %19s" % "Occupation")
+                f.write(" %19s" % "Energy")
+                f.write("%5s" % "|")
+            f.write("\n")
+            for i in range(self.bandsNumber):
+                for j in range(self.kpointsNumber):
+                    f.write(' %19s' % self.bandsIndex_Sorted_spin1[j+1][i])
+                    f.write(latt_form % self.bandOccupation_Sorted_spin1[j+1][i])
+                    f.write(latt_form % self.bandEnergies_Sorted_spin1[j+1][i])
+                    f.write("%5s" % "|")
+                f.write("\n")
+        if self.bandEnergies_Sorted_spin2 != None:
+            with open("bands_occupation_spin2.txt", "w") as f:
+                f.write("kpointsNumber = %d\n" % self.kpointsNumber)
+                for i in range(self.kpointsNumber):
+                    f.write(" %19s" % "Index/KPoints{}".format(str(i+1)))
+                    f.write(" %19s" % "Occupation")
+                    f.write(" %19s" % "Energy")
+                    f.write("%5s" % "|")
+                f.write("\n")
+                for i in range(self.bandsNumber):
+                    for j in range(self.kpointsNumber):
+                        f.write(' %19s' % self.bandsIndex_Sorted_spin2[j+1][i])
+                        f.write(latt_form % self.bandOccupation_Sorted_spin2[j+1][i])
+                        f.write(latt_form % self.bandEnergies_Sorted_spin2[j+1][i])
+                        f.write("%5s" % "|")
+                    f.write("\n")
+
