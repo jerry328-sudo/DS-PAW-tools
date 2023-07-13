@@ -435,10 +435,6 @@ class relaxLoad:
         data = h5py.File(self.filename, 'r')
         CoordinateType = [x.decode('UTF-8') for x in data["AtomInfo"]["CoordinateType"]]
         CoordinateType = "".join(CoordinateType)
-        if CoordinateType == "Cartesian":
-            pass
-        else:
-            raise ValueError("CoordinateType is not Cartesian")
         Elements = [x.decode('UTF-8') for x in data["AtomInfo"]["Elements"]]
         temp1 = [] # 将Elements中的符号转换为正常的格式
         temp2 = []
@@ -470,6 +466,10 @@ class relaxLoad:
         Lattice = [x.astype(np.float64) for x in data["AtomInfo"]["Lattice"]]
         Lattice = np.array(Lattice)
         Lattice = Lattice.reshape(-1, 3)
+        if CoordinateType == "Cartesian":
+            pass
+        else:
+            Position = np.dot(Position, Lattice)
         # 构造原子类
         self.atoms_initial = Atoms(cell = Lattice, pbc = True)
         for i in range(len(Elements)):
@@ -515,7 +515,6 @@ class relaxLoad:
             position_relax = [x.astype(np.float64) for x in data["Structures"][key]["Position"]]
             position_relax = np.array(position_relax)
             position_relax = position_relax.reshape(-1, 3)
-            # 虽然它写的是笛卡尔坐标系，但是实际上是分数坐标系
             position_relax = np.dot(position_relax, lattice_relax)
             # 构造当前步骤的原子类 atoms_relax
             atoms_relax = Atoms(cell = lattice_relax, pbc = True)
