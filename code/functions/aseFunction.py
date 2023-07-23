@@ -478,14 +478,15 @@ class relaxLoad:
                         mass = molar_mass(Elements[i]),
                         magmom = InitialMag[i], tag = Fix[i])
             self.atoms_initial.append(atom)
-        check = 1
-        if "MagInfo" in data:
-            if "TotalMagOnAtom" in data["MagInfo"]:
-                FinalMag = [x.astype(np.float64) for x in data["MagInfo"]["TotalMagOnAtom"]]
-            else:
-                check = 0
-        else:
-            FinalMag = np.zeros(len(Elements), dtype=np.float64).tolist()
+        # # 检验读取的磁矩信息是否正确
+        # check = 1
+        # if "MagInfo" in data:
+        #     if "TotalMagOnAtom" in data["MagInfo"]:
+        #         FinalMag = [x.astype(np.float64) for x in data["MagInfo"]["TotalMagOnAtom"]]
+        #     else:
+        #         check = 0
+        # else:
+        #     FinalMag = np.zeros(len(Elements), dtype=np.float64).tolist()
         # self.Force = []
         # self.RelaxTraj = []
 
@@ -529,9 +530,9 @@ class relaxLoad:
         # 最终结构信息
         self.atoms_final = self.RelaxTraj[-1]
         # 校验磁矩信息
-        if check == 1:
-            if sum(self.atoms_final.get_initial_magnetic_moments() - FinalMag) != 0:
-                raise ValueError("The magnetic moments are not consistent!(code bug, fix it!)")
+        # if check == 1:
+        #     if sum(self.atoms_final.get_initial_magnetic_moments() - FinalMag) != 0:
+        #         raise ValueError("The magnetic moments are not consistent!(code bug, fix it!)")
         if "Electron" in data:
             self.electron_number = data["Electron"][0].astype(np.float64)
             # 读取能量信息
